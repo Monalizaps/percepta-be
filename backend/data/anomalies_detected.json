@@ -1,0 +1,10 @@
+[
+  {
+    "user_id": "monaliza",
+    "timestamp": "2025-07-08T03:14:00",
+    "is_anomaly": true,
+    "score": 12.894173076783945,
+    "top_feature": "ip_risk_score",
+    "message": "Anomalia detectada"
+  }
+]
