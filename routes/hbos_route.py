@@ -44,14 +44,14 @@ def detect(log: AuthLog):
 
     if label:
         try:
-            with open("backend/data/anomalies_detected.json", "r") as f:
+            with open("data/anomalies_detected.json", "r") as f:
                 logs = json.load(f)
         except FileNotFoundError:
             logs = []
 
         logs.append(result)
-        os.makedirs("backend/data", exist_ok=True)
-        with open("backend/data/anomalies_detected.json", "w") as f:
+        os.makedirs("data", exist_ok=True)
+        with open("data/anomalies_detected.json", "w") as f:
             json.dump(logs, f, indent=2)
 
     return result
@@ -60,11 +60,11 @@ def detect(log: AuthLog):
 def simulate_detection():
     global trained
 
-    path = Path("backend/data/raw_logs.csv")
+    path = Path("data/raw_logs.csv")
     df_raw = pd.read_csv(path)
 
     if not trained:
-        df_train = pd.read_csv("backend/data/normal_logs_csv__simulado_.csv")
+        df_train = pd.read_csv("data/normal_logs_csv__simulado_.csv")
         df_train_proc = preprocess_auth_log(df_train.to_dict(orient="records"), fit=True)
         model.fit(df_train_proc[features_used])
         trained = True
