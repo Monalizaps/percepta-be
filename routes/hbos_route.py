@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from schema import AuthLog
 from service import preprocess_auth_log
 from pyod.models.hbos import HBOS
@@ -7,6 +7,9 @@ import json
 from datetime import datetime
 from pathlib import Path
 import os
+from db import get_connection
+
+
 
 router = APIRouter()
 
@@ -43,18 +46,39 @@ def detect(log: AuthLog):
     }
 
     if label:
-        try:
-            with open("data/anomalies_detected.json", "r") as f:
-                logs = json.load(f)
-        except FileNotFoundError:
-            logs = []
-
-        logs.append(result)
-        os.makedirs("data", exist_ok=True)
-        with open("data/anomalies_detected.json", "w") as f:
-            json.dump(logs, f, indent=2)
+        db_log = {
+            "user_id": log.user_id,
+            "timestamp": log.timestamp,
+            "ip_address": log.ip_address,
+            "action": log.action,
+            "location": log.location,
+            "device": log.device,
+            "score": float(score),
+            "top_feature": top_feature,
+            "message": "Anomalia detectada"
+        }
+        insert_anomalous_log(db_log)
 
     return result
+
+@router.get("/anomalies")
+def get_anomalies():
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM anomalous_logs ORDER BY login_time DESC")
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+
+        # Mapear os resultados para dicts
+        columns = ["id", "user_id", "login_time", "ip_address", "action", "location", "device", "score", "top_feature", "message"]
+        anomalies = [dict(zip(columns, row)) for row in rows]
+
+        return anomalies
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/simulate")
 def simulate_detection():

@@ -1,7 +1,6 @@
 from datetime import datetime
 import pandas as pd
 from schema import AuthLog
-
 from datetime import datetime
 import pandas as pd
 from schema import AuthLog

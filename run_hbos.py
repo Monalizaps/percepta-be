@@ -12,7 +12,7 @@ def load_and_detect_anomalies(csv_path, output_json_path):
     with open(output_json_path, "w") as f:
         json.dump(anomalies.to_dict(orient="records"), f, indent=2)
 
-    print(f"✅ Anomalias salvas em: {output_json_path}")
+    print(f"Anomalias salvas em: {output_json_path}")
 
 if __name__ == "__main__":
     load_and_detect_anomalies("data/raw_logs.csv", "data/anomalies_detected.json")
