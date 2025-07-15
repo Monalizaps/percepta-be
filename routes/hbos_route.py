@@ -1,13 +1,14 @@
+import pandas as pd
+import os
+from datetime import datetime
+from psycopg2.extras import RealDictCursor
 from fastapi import APIRouter, HTTPException
 from schema import AuthLog
 from service import preprocess_auth_log
 from pyod.models.hbos import HBOS
-import pandas as pd
-import json
-from datetime import datetime
 from pathlib import Path
-import os
-from db import get_connection
+from db import get_connection, insert_anomalous_log
+
 
 
 
@@ -65,20 +66,28 @@ def detect(log: AuthLog):
 def get_anomalies():
     try:
         conn = get_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT * FROM anomalous_logs ORDER BY login_time DESC")
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("""
+            SELECT id, user_id, timestamp, ip_address, action, location, device, score, top_feature, message
+            FROM anomalous_logs
+            ORDER BY timestamp DESC
+        """)
         rows = cur.fetchall()
         cur.close()
         conn.close()
 
-        # Mapear os resultados para dicts
-        columns = ["id", "user_id", "login_time", "ip_address", "action", "location", "device", "score", "top_feature", "message"]
-        anomalies = [dict(zip(columns, row)) for row in rows]
+        # Converte datetime para ISO string
+        for row in rows:
+            if isinstance(row.get("timestamp"), datetime):
+                row["timestamp"] = row["timestamp"].isoformat()
 
-        return anomalies
+        print("Anomalies fetched from DB:", rows)
+
+        return rows
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.get("/simulate")
 def simulate_detection():

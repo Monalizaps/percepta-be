@@ -8,7 +8,8 @@ from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI(title="Percepta - Anomaly Detection API")
 
 origins = [
-    "http://localhost:3000",  # URL do seu frontend React em dev
+    "http://localhost:3000",
+    "http://localhost:8080",  # URL do seu frontend React em dev
     # adicione outras URLs se precisar
 ]
 

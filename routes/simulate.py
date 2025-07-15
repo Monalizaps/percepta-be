@@ -1,16 +1,90 @@
-from fastapi import APIRouter
-import pandas as pd
+from fastapi import APIRouter, HTTPException
 from schema import AuthLog
 from service import preprocess_auth_log
 from pyod.models.hbos import HBOS
+import pandas as pd
+from datetime import datetime
 from pathlib import Path
-import json
+import os
+from db import get_connection, insert_anomalous_log
 
 router = APIRouter()
 
 model = HBOS()
 trained = False
 features_used = ['hour', 'day_of_week', 'ip_risk_score', 'action_weight']
+
+@router.post("/detect")
+def detect(log: AuthLog):
+    global trained
+
+    df_input = preprocess_auth_log([log.dict()], fit=False)
+
+    if not trained:
+        df_train = pd.read_csv(os.path.join("data", "normal_logs_csv__simulado_.csv"))
+        df_train_proc = preprocess_auth_log(df_train.to_dict(orient="records"), fit=True)
+        model.fit(df_train_proc[features_used])
+        trained = True
+
+    score = model.decision_function(df_input[features_used])[0]
+    label = model.predict(df_input[features_used])[0]
+
+    feature_weights = abs(df_input[features_used].iloc[0] - model.decision_scores_.mean())
+    top_feature = feature_weights.idxmax()
+
+    result = {
+        "user_id": log.user_id,
+        "timestamp": log.timestamp,
+        "is_anomaly": bool(label),
+        "score": float(score),
+        "top_feature": top_feature,
+        "message": "Anomalia detectada" if label else "Comportamento normal"
+    }
+
+    if label:
+        db_log = {
+            "user_id": log.user_id,
+            "timestamp": log.timestamp,  # mantendo o nome timestamp
+            "ip_address": log.ip_address,
+            "action": log.action,
+            "location": log.location,
+            "device": log.device,
+            "score": float(score),
+            "top_feature": top_feature,
+            "message": "Anomalia detectada"
+        }
+        insert_anomalous_log(db_log)
+
+    return result
+
+@router.get("/anomalies")
+def get_anomalies():
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT id, user_id, timestamp, ip_address, action, location, device, score, top_feature, message
+            FROM anomalous_logs
+            ORDER BY timestamp DESC
+        """)
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+
+        columns = ["id", "user_id", "timestamp", "ip_address", "action", "location", "device", "score", "top_feature", "message"]
+        anomalies = []
+        for row in rows:
+            row_dict = dict(zip(columns, row))
+            if isinstance(row_dict["timestamp"], (datetime, pd.Timestamp)):
+                row_dict["timestamp"] = row_dict["timestamp"].isoformat()
+            anomalies.append(row_dict)
+
+        print(f"Anomalies fetched from DB: {anomalies[:3]}")
+
+        return anomalies
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/simulate")
 def simulate_detection():

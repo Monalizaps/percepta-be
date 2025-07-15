@@ -23,23 +23,22 @@ def get_connection():
     )
 
 def insert_anomalous_log(log: dict):
-    with get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                INSERT INTO anomalous_logs (
-                    user_id, login_time, ip_address, action, location, device, score, top_feature, message
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """, (
-                log.get("user_id"),
-                log.get("timestamp"),
-                log.get("ip_address"),
-                log.get("action"),
-                log.get("location"),
-                log.get("device"),
-                log.get("score"),
-                log.get("top_feature"),
-                log.get("message")
-            ))
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO anomalous_logs (user_id, timestamp, ip_address, action, location, device, score, top_feature, message)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+    """, (
+        log.get("user_id"),
+        log.get("timestamp"),
+        log.get("ip_address"),
+        log.get("action"),
+        log.get("location"),
+        log.get("device"),
+        log.get("score"),
+        log.get("top_feature"),
+        log.get("message")
+    ))
     conn.commit()
     cur.close()
     conn.close()

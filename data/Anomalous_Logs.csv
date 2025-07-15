@@ -1,4 +1,4 @@
-user_id,login_time,ip_address,location,device,action
+user_id,timestamp,ip_address,location,device,action
 user_49,2025-07-28T13:06:12.237271,10.204.156.34,Syria,Unknown Device,download_sensitive_data
 user_33,2025-07-26T13:06:12.237312,10.196.41.2,Beijing,Emulated Device,download_sensitive_data
 user_50,2025-08-01T13:06:12.237323,10.177.222.113,Syria,Tor Node,disable_2fa
